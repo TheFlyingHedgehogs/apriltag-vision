@@ -4,10 +4,10 @@ import cv2
 import pupil_apriltags as apriltag
 import numpy as np
 import pickle as pkl
-from picamera2 import Picamera2
+# from picamera2 import Picamera2
 import time
-from networktables import NetworkTables
-from libcamera import controls
+# from networktables import NetworkTables
+# from libcamera import controls
 
 @dataclasses.dataclass
 class Calibration:
@@ -28,7 +28,7 @@ class FisheyeCalibration(Calibration):
 class TargetFinder:
     def __init__(self, calibration: Calibration, width=0.1524):
         self.calibration = calibration
-        self.detector = apriltag.Detector(families="tag36h11")
+        self.detector = apriltag.Detector(families="tag16h5")
 
         # Set up real-world coordinates of the target corners
         self.object_points = np.array([
@@ -47,6 +47,8 @@ class TargetFinder:
 
         # loop over the AprilTag detection results
         for r in results:
+            if r.hamming > 1:
+                continue
             if isinstance(self.calibration, PinholeCalibration):
                 image_points = cv2.undistortPoints(
                     np.array(r.corners),
@@ -72,31 +74,32 @@ class TargetFinder:
 mtx, dist = pkl.load(open("calib-all-picam", "rb"))
 finder = TargetFinder(PinholeCalibration(mtx, dist))
 
-picam2 = Picamera2()
-video_config = picam2.create_video_configuration({"size": (1296, 972)})
-picam2.set_controls({"AeExposureMode": controls.AeExposureModeEnum.Short})
-picam2.set_controls({"AnalogueGain": 100})
-picam2.configure(video_config)
-picam2.start()
+# picam2 = Picamera2()
+# video_config = picam2.create_video_configuration({"size": (1296, 972)})
+# picam2.set_controls({"AeExposureMode": controls.AeExposureModeEnum.Short})
+# picam2.set_controls({"AnalogueGain": 100})
+# picam2.configure(video_config)
+# picam2.start()
 
-time.sleep(2)
+# time.sleep(2)
 
 start = time.perf_counter()
 frames = 0
 
-NetworkTables.initialize(server="10.28.98.2")
-sd = NetworkTables.getTable("SmartDashboard")
+# NetworkTables.initialize(server="10.28.98.2")
+# sd = NetworkTables.getTable("SmartDashboard")
 
 while True:
-    img = picam2.capture_array("main")
+    # img = picam2.capture_array("main")
+    img = cv2.imread("/home/foo/synced/apriltags-2/test0.png")
     v = finder.detect(img)
     for (r, t) in v:
-        sd.putNumber("VisionX", t[0])
-        sd.putNumber("VisionY", t[1])
-        sd.putNumber("VisionZ", t[2])
-        NetworkTables.flush()
+        # sd.putNumber("VisionX", t[0])
+        # sd.putNumber("VisionY", t[1])
+        # sd.putNumber("VisionZ", t[2])
+        # NetworkTables.flush()
         # print(t)
-        # print(f"{math.sqrt(t[0] ** 2 + t[1] ** 2 + t[2] ** 2) * 39.370079} in")
+        print(f"{math.sqrt(t[0] ** 2 + t[1] ** 2 + t[2] ** 2) * 39.370079} in")
     frames += 1
     if frames >= 100:
         now = time.perf_counter()
